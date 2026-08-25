@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票監測器 Dashboard</title>
+<style>
+  :root {
+    --green: #0a7a2f;
+    --red: #c0392b;
+    --border: #ddd;
+    --bg-soft: #f5f5f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #fafafa;
+    color: #222;
+  }
+  header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 16px 24px;
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; color: #aaa; }
+
+  .market-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .market-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 15px;
+    font-weight: 600;
+    color: #888;
+    border-bottom: 3px solid transparent;
+  }
+  .market-tab.active { color: #1a1a2e; border-bottom-color: #1a1a2e; }
+
+  .layout { display: flex; min-height: calc(100vh - 120px); }
+
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+  }
+  .date-group { border-bottom: 1px solid #eee; }
+  .date-label {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    background: var(--bg-soft);
+  }
+  .session-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+  }
+  .session-btn:hover { background: #f0f4fa; }
+  .session-btn.active { background: #e3ecfa; font-weight: 600; color: #1a1a2e; }
+
+  .main { flex: 1; padding: 20px 28px; overflow-x: auto; }
+  .entry-header { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+
+  .box {
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .box-dropout { background: #fdeaea; border: 1px solid #e79a9a; }
+  .box-streak { background: #fff8e1; border: 1px solid #f0d878; }
+  .box-hitrate { background: #eef4fb; border: 1px solid #b8d1ea; }
+  .box strong.title { font-size: 14px; display: block; margin-bottom: 6px; }
+  .box ul { margin: 4px 0 0; padding-left: 18px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+  th { text-align: left; padding: 8px; border-bottom: 2px solid #333; background: var(--bg-soft); }
+  td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.center { text-align: center; white-space: nowrap; }
+  .score-pos { color: var(--green); font-weight: bold; }
+  .score-neg { color: var(--red); font-weight: bold; }
+  .section-title { font-size: 15px; font-weight: 700; margin: 20px 0 8px; }
+  .empty { color: #888; padding: 40px; text-align: center; }
+  .reason { font-size: 12px; color: #555; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 股票監測器 Dashboard</h1>
+  <p>台股 / 美股歷史排名瀏覽，資料每次排程執行後自動更新</p>
+</header>
+<div class="market-tabs">
+  <button class="market-tab active" data-market="tw">台股</button>
+  <button class="market-tab" data-market="us">美股</button>
+</div>
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main" id="main"></div>
+</div>
+
+<script>
+const DATA = {"tw": [{"id": "2026-08-25_afterclose", "date": "2026-08-25", "session": "afterclose", "bullish": [{"symbol": "2330.TW", "name": "台積電", "current_price": 2400.0, "composite_score": 74.6, "rank_change": "— 持平", "fundamental_note": "營收年增率 36.0%；獲利年增率 77.4%；淨利率 49.9%；財務結構穩健(負債比17)；ROE 40.0%；營運現金流成長", "technical_note": "KD:黃金交叉（偏多訊號）；站上季線；5日漲跌+0.8%；月漲跌+2.1%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "1/3（33%）"}, {"symbol": "3008.TW", "name": "大立光", "current_price": 5720.0, "composite_score": 73.3, "rank_change": "— 持平", "fundamental_note": "營收年增率 17.1%；獲利年增率 362.5%；淨利率 38.4%；財務結構穩健(負債比0)；ROE 13.3%；營運現金流下滑", "technical_note": "KD:黃金交叉（偏多訊號）；站上季線；5日漲跌+8.1%；月漲跌+41.1%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：【13:20 即時新聞】大立光(3008)股價上漲逾6%，F；偏多：大立光法說／Q2 EPS 35.72元，上半年獲利年增44%", "track_record": "0/1（0%）"}, {"symbol": "2357.TW", "name": "華碩", "current_price": 925.0, "composite_score": 71.0, "rank_change": "— 持平", "fundamental_note": "營收年增率 37.1%；獲利年增率 94.1%；淨利率 5.8%；財務結構穩健(負債比31)；ROE 18.6%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+1.6%；月漲跌+21.7%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：Lenovo Shares Surge 22% After ；偏多：American States Water Co (AWR)", "track_record": "1/2（50%）"}, {"symbol": "6213.TW", "name": "聯茂", "current_price": 530.0, "composite_score": 70.7, "rank_change": "— 持平", "fundamental_note": "營收年增率 29.9%；獲利年增率 203.8%；淨利率 6.3%；財務結構穩健(負債比27)；ROE 11.5%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+8.6%；月漲跌+72.6%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：【量大強漲股整理】開低走高甩爆空頭 ，【3081聯亞】+67；偏多：Factset 最新調查：聯茂(6213-TW)目標價調升至", "track_record": "0/2（0%）"}, {"symbol": "2303.TW", "name": "聯電", "current_price": 125.0, "composite_score": 68.3, "rank_change": "— 持平", "fundamental_note": "營收年增率 17.0%；獲利年增率 374.6%；淨利率 33.3%；財務結構穩健(負債比14)；ROE 21.3%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+5.0%；月漲跌-0.8%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：This Beaten-Down Chip Stock Co", "track_record": "1/2（50%）"}, {"symbol": "2344.TW", "name": "華邦電", "current_price": 179.0, "composite_score": 63.2, "rank_change": "— 持平", "fundamental_note": "營收年增率 184.7%；淨利率 27.8%；財務結構穩健(負債比41)；ROE 30.0%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+1.4%；月漲跌+11.9%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共1則新聞，無明顯偏向", "track_record": "0/1（0%）"}, {"symbol": "3034.TW", "name": "聯詠", "current_price": 555.0, "composite_score": 62.5, "rank_change": "— 持平", "fundamental_note": "營收年增率 9.6%；獲利年增率 69.2%；淨利率 17.6%；財務結構穩健(負債比1)；ROE 27.1%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌+9.9%；月漲跌+7.1%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：【13:22 即時新聞】聯詠(3034)股價走強至544元上", "track_record": "3/3（100%）"}, {"symbol": "2884.TW", "name": "玉山金", "current_price": 39.0, "composite_score": 61.1, "rank_change": "— 持平", "fundamental_note": "營收年增率 34.4%；獲利年增率 43.6%；淨利率 40.9%；ROE 14.7%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌+2.4%；月漲跌+7.1%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "偏多：E. Sun Financial Holding Co Lt", "track_record": "1/1（100%）"}, {"symbol": "2615.TW", "name": "萬海", "current_price": 126.5, "composite_score": 58.8, "rank_change": "— 持平", "fundamental_note": "營收年增率 23.1%；獲利年增率 981.6%；淨利率 28.2%；財務結構穩健(負債比22)；ROE 15.5%；營運現金流下滑", "technical_note": "KD:死亡交叉（偏空訊號）；站上季線；5日漲跌+20.5%；月漲跌+50.6%", "four_signals_note": "買點(3/3項可判定)：量大收紅、三日均價翻揚、三日均價>六日均價", "news_note": "共1則新聞，無明顯偏向", "track_record": "1/2（50%）"}, {"symbol": "2887.TW", "name": "台新金", "current_price": 37.15, "composite_score": 58.2, "rank_change": "— 持平", "fundamental_note": "營收年增率 274.7%；獲利年增率 645.5%；淨利率 43.5%；ROE 13.6%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌+0.7%；月漲跌+6.3%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共1則新聞，無明顯偏向", "track_record": "1/1（100%）"}], "bearish": [{"symbol": "6488.TWO", "name": "環球晶", "current_price": 980.0, "composite_score": -21.8, "rank_change": "— 持平", "fundamental_note": "營收年增率 -5.0%；獲利年增率 125.1%；淨利率 16.9%；ROE 10.8%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌-7.5%；月漲跌-8.0%", "four_signals_note": "賣點(3/3項可判定)：量縮價跌、三日均價翻黑、三日均價<六日均價", "news_note": "共3則新聞，無明顯偏向", "track_record": "0/2（0%）"}, {"symbol": "2002.TW", "name": "中鋼", "current_price": 19.05, "composite_score": -20.7, "rank_change": "— 持平", "fundamental_note": "營收年增率 4.4%；淨利率 -1.0%；ROE -0.3%；營運現金流成長", "technical_note": "KD:死亡交叉（偏空訊號）；跌破季線；5日漲跌+0.5%；月漲跌-1.0%", "four_signals_note": "買點(1/3項可判定)：三日均價>六日均價；賣點(2/3項可判定)：量縮價跌、三日均價翻黑", "news_note": "共2則新聞，無明顯偏向", "track_record": "1/1（100%）"}, {"symbol": "4938.TW", "name": "和碩", "current_price": 88.8, "composite_score": -18.7, "rank_change": "— 持平", "fundamental_note": "營收年增率 2.7%；獲利年增率 1447.0%；淨利率 1.4%；財務結構穩健(負債比38)；ROE 9.0%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌-2.4%；月漲跌+1.6%", "four_signals_note": "賣點(3/3項可判定)：量大收黑、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "0/2（0%）"}, {"symbol": "2409.TW", "name": "友達", "current_price": 25.65, "composite_score": -18.1, "rank_change": "— 持平", "fundamental_note": "營收年增率 2.4%；獲利年增率 -30.3%；淨利率 0.6%；ROE 1.8%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌-2.7%；月漲跌+9.2%", "four_signals_note": "買點(1/3項可判定)：量大收紅；賣點(2/3項可判定)：三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "1/3（33%）"}, {"symbol": "2317.TW", "name": "鴻海", "current_price": 243.0, "composite_score": -13.0, "rank_change": "— 持平", "fundamental_note": "營收年增率 40.8%；獲利年增率 34.2%；淨利率 2.3%；ROE 13.2%；營運現金流成長", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-2.4%；月漲跌-4.0%", "four_signals_note": "賣點(3/3項可判定)：量大收黑、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "2/2（100%）"}, {"symbol": "5347.TWO", "name": "世界先進", "current_price": 150.5, "composite_score": -12.2, "rank_change": "— 持平", "fundamental_note": "營收年增率 21.8%；獲利年增率 42.0%；淨利率 16.8%；財務結構穩健(負債比43)；ROE 10.7%；營運現金流成長", "technical_note": "KD:中性；跌破季線；5日漲跌-2.9%；月漲跌-4.1%", "four_signals_note": "賣點(3/3項可判定)：量縮價跌、三日均價翻黑、三日均價<六日均價", "news_note": "偏空：TSMC Shares Plunge After Surpr", "track_record": "0/1（0%）"}, {"symbol": "2327.TW", "name": "國巨", "current_price": 544.0, "composite_score": -9.6, "rank_change": "— 持平", "fundamental_note": "營收年增率 35.7%；獲利年增率 88.7%；淨利率 20.1%；ROE 18.7%；營運現金流下滑", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-5.6%；月漲跌-13.0%", "four_signals_note": "賣點(3/3項可判定)：量大收黑、三日均價翻黑、三日均價<六日均價", "news_note": "共2則新聞，無明顯偏向", "track_record": "0/1（0%）"}, {"symbol": "3533.TW", "name": "嘉澤", "current_price": 1605.0, "composite_score": -7.6, "rank_change": "— 持平", "fundamental_note": "營收年增率 14.8%；獲利年增率 164.5%；淨利率 25.2%；財務結構穩健(負債比3)；ROE 24.4%；營運現金流下滑", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-1.2%；月漲跌-16.4%", "four_signals_note": "賣點(3/3項可判定)：量大收黑、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "1101.TW", "name": "台泥", "current_price": 24.6, "composite_score": -6.8, "rank_change": "— 持平", "fundamental_note": "營收年增率 7.8%；獲利年增率 7202.2%；淨利率 -6.2%；ROE -3.1%；營運現金流成長", "technical_note": "KD:死亡交叉（偏空訊號）；站上季線；5日漲跌+2.1%；月漲跌+0.8%", "four_signals_note": "買點(1/3項可判定)：三日均價>六日均價；賣點(2/3項可判定)：量縮價跌、三日均價翻黑", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "2308.TW", "name": "台達電", "current_price": 1710.0, "composite_score": -5.1, "rank_change": "— 持平", "fundamental_note": "營收年增率 47.7%；獲利年增率 80.4%；淨利率 12.5%；財務結構穩健(負債比21)；ROE 30.0%；營運現金流成長", "technical_note": "KD:中性；跌破季線；5日漲跌-6.0%；月漲跌-2.6%", "four_signals_note": "賣點(3/3項可判定)：量大收黑、三日均價翻黑、三日均價<六日均價", "news_note": "偏空：Musashi Seimitsu might be the ", "track_record": "尚無歷史紀錄"}], "long_streak_top5": [], "top10_dropouts": [], "hit_rate_summary": {"overall": {"n": 70, "simple_rate": 38.5, "alpha_rate": 41.8, "avg_return_pct": 0.06, "avg_alpha_pct": 0.48}, "bullish": {"n": 35, "simple_rate": 41.9, "alpha_rate": 51.5, "avg_return_pct": -0.45, "avg_alpha_pct": -0.03}, "bearish": {"n": 35, "simple_rate": 35.3, "alpha_rate": 32.4, "avg_return_pct": 0.57, "avg_alpha_pct": 0.99}}}], "us": [{"id": "2026-08-25_afterclose", "date": "2026-08-25", "session": "afterclose", "bullish": [{"symbol": "SHOP", "name": "夏菲", "current_price": 154.1, "composite_score": 68.5, "rank_change": "— 持平", "fundamental_note": "營收年增率 33.7%；獲利年增率 68.1%；淨利率 14.5%；財務結構穩健(負債比1)；ROE 15.5%；營運現金流成長", "technical_note": "KD:黃金交叉（偏多訊號）；站上季線；5日漲跌+5.1%；月漲跌+21.4%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "MSFT", "name": "微軟", "current_price": 489.21, "composite_score": 66.0, "rank_change": "— 持平", "fundamental_note": "營收年增率 17.7%；獲利年增率 31.7%；淨利率 40.3%；財務結構穩健(負債比29)；ROE 34.0%；營運現金流成長", "technical_note": "KD:黃金交叉（偏多訊號）；站上季線；5日漲跌+1.8%；月漲跌+26.0%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "LLY", "name": "禮來", "current_price": 1262.6, "composite_score": 63.4, "rank_change": "↑ 進步3名", "fundamental_note": "營收年增率 47.7%；獲利年增率 26.2%；淨利率 33.5%；ROE 102.3%；營運現金流成長", "technical_note": "KD:黃金交叉（偏多訊號）；站上季線；5日漲跌+3.0%；月漲跌+5.6%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "PLTR", "name": "帕蘭泰爾", "current_price": 174.1, "composite_score": 50.3, "rank_change": "↓ 退步1名", "fundamental_note": "營收年增率 92.8%；獲利年增率 215.4%；淨利率 49.0%；財務結構穩健(負債比2)；ROE 38.1%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+1.5%；月漲跌+32.4%", "four_signals_note": "買點(2/3項可判定)：三日均價翻揚、三日均價>六日均價；賣點(1/3項可判定)：量縮價跌", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "META", "name": "META平台", "current_price": 563.26, "composite_score": 49.4, "rank_change": "↑ 進步2名", "fundamental_note": "營收年增率 28.0%；獲利年增率 -13.4%；淨利率 29.8%；財務結構穩健(負債比43)；ROE 29.8%；營運現金流成長", "technical_note": "KD:黃金交叉（偏多訊號）；跌破季線；5日漲跌+3.6%；月漲跌-5.2%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "ORCL", "name": "甲骨文", "current_price": 145.2, "composite_score": 48.5, "rank_change": "↑ 進步2名", "fundamental_note": "營收年增率 20.6%；獲利年增率 21.9%；淨利率 25.4%；負債比偏高(389)；ROE 53.4%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+1.7%；月漲跌+21.1%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "NFLX", "name": "網飛", "current_price": 81.67, "composite_score": 46.8, "rank_change": "↑ 進步2名", "fundamental_note": "營收年增率 13.4%；獲利年增率 11.1%；淨利率 28.2%；ROE 49.5%；營運現金流成長", "technical_note": "KD:高檔鈍化（超買區）；站上季線；5日漲跌+5.0%；月漲跌+16.0%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "TSM", "name": "台積電ADR", "current_price": 415.56, "composite_score": 46.7, "rank_change": "↓ 退步4名", "fundamental_note": "營收年增率 36.0%；獲利年增率 77.4%；淨利率 49.9%；財務結構穩健(負債比17)；ROE 40.0%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌+0.5%；月漲跌+4.1%", "four_signals_note": "買點(2/3項可判定)：量縮價不跌、三日均價>六日均價；賣點(1/3項可判定)：三日均價翻黑", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "UBER", "name": "優步", "current_price": 79.4, "composite_score": 44.4, "rank_change": "🆕 新進榜", "fundamental_note": "營收年增率 12.2%；獲利年增率 85.5%；淨利率 17.3%；ROE 37.2%；營運現金流成長", "technical_note": "KD:高檔鈍化（超買區）；站上季線；5日漲跌+6.3%；月漲跌+16.5%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "偏空：DoorDash, Uber Eats and Instac；偏空：Dutch regulator fines Uber €82", "track_record": "尚無歷史紀錄"}, {"symbol": "GS", "name": "高盛", "current_price": 1049.3, "composite_score": 44.3, "rank_change": "🆕 新進榜", "fundamental_note": "營收年增率 42.5%；獲利年增率 92.3%；淨利率 31.0%；負債比偏高(725)；ROE 16.9%；營運現金流下滑", "technical_note": "KD:中性；站上季線；5日漲跌+0.8%；月漲跌+0.1%", "four_signals_note": "買點(3/3項可判定)：量縮價不跌、三日均價翻揚、三日均價>六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}], "bearish": [{"symbol": "NKE", "name": "耐吉", "current_price": 39.62, "composite_score": -15.2, "rank_change": "— 持平", "fundamental_note": "營收年增率 -1.1%；獲利年增率 428.0%；淨利率 6.7%；ROE 22.1%；營運現金流下滑", "technical_note": "KD:中性；跌破季線；5日漲跌-1.1%；月漲跌-6.0%", "four_signals_note": "賣點(3/3項可判定)：量縮價跌、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "CRWD", "name": "眾擊", "current_price": 188.7, "composite_score": -14.7, "rank_change": "🆕 新進榜", "fundamental_note": "營收年增率 25.6%；淨利率 -0.6%；財務結構穩健(負債比18)；ROE -0.2%；營運現金流成長", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-11.4%；月漲跌+4.8%", "four_signals_note": "賣點(3/3項可判定)：量縮價跌、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "AAPL", "name": "蘋果", "current_price": 309.19, "composite_score": -14.2, "rank_change": "🆕 新進榜", "fundamental_note": "營收年增率 16.4%；獲利年增率 28.7%；淨利率 27.6%；ROE 148.8%；營運現金流下滑", "technical_note": "KD:死亡交叉（偏空訊號）；跌破季線；5日漲跌-0.3%；月漲跌-8.2%", "four_signals_note": "賣點(3/3項可判定)：量縮價跌、三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "HD", "name": "家得寶", "current_price": 335.35, "composite_score": -9.8, "rank_change": "↑ 進步1名", "fundamental_note": "營收年增率 5.7%；獲利年增率 4.6%；淨利率 8.4%；負債比偏高(377)；ROE 104.3%；營運現金流下滑", "technical_note": "KD:中性；跌破季線；5日漲跌-0.6%；月漲跌-0.2%", "four_signals_note": "買點(1/3項可判定)：三日均價翻揚；賣點(2/3項可判定)：量縮價跌、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "WMT", "name": "沃爾瑪", "current_price": 104.82, "composite_score": -8.8, "rank_change": "↑ 進步3名", "fundamental_note": "營收年增率 5.9%；獲利年增率 -9.1%；淨利率 3.0%；ROE 22.3%；營運現金流成長", "technical_note": "KD:中性；跌破季線；5日漲跌-8.8%；月漲跌-6.0%", "four_signals_note": "買點(1/3項可判定)：三日均價翻揚；賣點(2/3項可判定)：量縮價跌、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "BA", "name": "波音", "current_price": 211.24, "composite_score": -5.4, "rank_change": "↑ 進步1名", "fundamental_note": "營收年增率 8.0%；淨利率 2.6%；負債比偏高(791)；ROE 173.5%；營運現金流成長", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-5.3%；月漲跌-0.1%", "four_signals_note": "買點(1/3項可判定)：量縮價不跌；賣點(2/3項可判定)：三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "WFC", "name": "富國銀行", "current_price": 84.19, "composite_score": -5.1, "rank_change": "↑ 進步3名", "fundamental_note": "營收年增率 9.5%；獲利年增率 25.0%；淨利率 27.2%；ROE 12.6%；營運現金流下滑", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-3.7%；月漲跌-3.0%", "four_signals_note": "買點(1/3項可判定)：三日均價翻揚；賣點(2/3項可判定)：量縮價跌、三日均價<六日均價", "news_note": "偏空：Goldman, Wells Say Treasury Bu；偏空：Canada Goose Shares Slide Afte", "track_record": "尚無歷史紀錄"}, {"symbol": "SNOW", "name": "雪花", "current_price": 317.71, "composite_score": -4.8, "rank_change": "↑ 進步2名", "fundamental_note": "營收年增率 33.5%；淨利率 -23.8%；ROE -54.9%；營運現金流成長", "technical_note": "KD:中性；跌破季線；5日漲跌-2.3%；月漲跌+16.4%", "four_signals_note": "買點(1/3項可判定)：三日均價>六日均價；賣點(2/3項可判定)：量縮價跌、三日均價翻黑", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}, {"symbol": "INTC", "name": "英特爾", "current_price": 88.54, "composite_score": -2.6, "rank_change": "↑ 進步1名", "fundamental_note": "營收年增率 25.4%；淨利率 -19.8%；財務結構穩健(負債比49)；ROE -10.7%；營運現金流成長", "technical_note": "KD:低檔鈍化（超賣區）；跌破季線；5日漲跌-8.4%；月漲跌-3.4%", "four_signals_note": "買點(1/3項可判定)：量縮價不跌；賣點(2/3項可判定)：三日均價翻黑、三日均價<六日均價", "news_note": "偏多：AMD Stock Upgraded To Strong B", "track_record": "尚無歷史紀錄"}, {"symbol": "QCOM", "name": "高通", "current_price": 160.13, "composite_score": 4.0, "rank_change": "🆕 新進榜", "fundamental_note": "營收年增率 -4.0%；獲利年增率 -23.0%；淨利率 21.0%；ROE 33.8%；營運現金流成長", "technical_note": "KD:中性；站上季線；5日漲跌-0.0%；月漲跌-5.8%", "four_signals_note": "買點(1/3項可判定)：量縮價不跌；賣點(2/3項可判定)：三日均價翻黑、三日均價<六日均價", "news_note": "共5則新聞，無明顯偏向", "track_record": "尚無歷史紀錄"}], "long_streak_top5": [], "top10_dropouts": [], "hit_rate_summary": {"overall": {"n": 0, "simple_rate": null, "alpha_rate": null, "avg_return_pct": null, "avg_alpha_pct": null}, "bullish": {"n": 0, "simple_rate": null, "alpha_rate": null, "avg_return_pct": null, "avg_alpha_pct": null}, "bearish": {"n": 0, "simple_rate": null, "alpha_rate": null, "avg_return_pct": null, "avg_alpha_pct": null}}}]};
+const SESSION_LABELS = {"premarket": "盤前", "midday": "盤中", "afterclose": "盤後"};
+
+let currentMarket = "tw";
+let currentEntryId = null;
+
+function fmtScore(score) {
+  const cls = score > 0 ? "score-pos" : (score < 0 ? "score-neg" : "");
+  const sign = score > 0 ? "+" : "";
+  return `<span class="${cls}">${sign}${score}</span>`;
+}
+
+function renderSidebar() {
+  const entries = DATA[currentMarket] || [];
+  const sidebar = document.getElementById("sidebar");
+  if (entries.length === 0) {
+    sidebar.innerHTML = '<div class="empty">尚無歷史資料</div>';
+    return;
+  }
+  // group by date, most recent first
+  const byDate = {};
+  entries.forEach(e => {
+    if (!byDate[e.date]) byDate[e.date] = [];
+    byDate[e.date].push(e);
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+  let html = "";
+  dates.forEach(d => {
+    html += `<div class="date-group"><div class="date-label">${d}</div>`;
+    byDate[d].sort((a, b) => a.session.localeCompare(b.session)).forEach(e => {
+      const label = SESSION_LABELS[e.session] || e.session;
+      html += `<button class="session-btn" data-id="${e.id}">${label}</button>`;
+    });
+    html += `</div>`;
+  });
+  sidebar.innerHTML = html;
+
+  sidebar.querySelectorAll(".session-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectEntry(btn.dataset.id);
+    });
+  });
+}
+
+function buildTable(stocks) {
+  if (!stocks || stocks.length === 0) return '<div class="empty">無資料</div>';
+  let rows = stocks.map((s, i) => {
+    const reason = `基本面：${s.fundamental_note || ""}<br>技術面：${s.technical_note || ""}<br>量價四大買賣點：${s.four_signals_note || ""}<br>消息面：${s.news_note || ""}`;
+    return `<tr>
+<td class="center">${i + 1}</td>
+<td><strong>${s.name}</strong><br><span style="color:#888;font-size:12px;">${s.symbol}</span></td>
+<td class="center">${s.current_price ?? "—"}</td>
+<td class="center">${fmtScore(s.composite_score)}</td>
+<td class="center">${s.rank_change || "—"}</td>
+<td class="center">${s.track_record || "尚無歷史紀錄"}</td>
+<td class="reason">${reason}</td>
+</tr>`;
+  }).join("");
+  return `<table>
+<thead><tr><th>排名</th><th>股票</th><th>股價</th><th>綜合分數</th><th>排名變化</th><th>歷史命中率</th><th>評分理由</th></tr></thead>
+<tbody>${rows}</tbody>
+</table>`;
+}
+
+function hitRateLine(label, stats) {
+  if (!stats || !stats.n) return `${label}：尚無足夠已驗證的歷史預測`;
+  return `${label}：已驗證 ${stats.n} 筆 ｜ 絕對方向命中率 ${stats.simple_rate}% ｜ 相對大盤命中率 ${stats.alpha_rate}%`;
+}
+
+function renderMain(entry) {
+  const main = document.getElementById("main");
+  if (!entry) {
+    main.innerHTML = '<div class="empty">請從左側選擇日期/場次</div>';
+    return;
+  }
+  const label = SESSION_LABELS[entry.session] || entry.session;
+  let html = `<div class="entry-header">${entry.date}　${label}</div>`;
+
+  if (entry.top10_dropouts && entry.top10_dropouts.length) {
+    const items = entry.top10_dropouts.map(s => `<li><strong>${s.name}</strong>（${s.symbol}）原本已連續 <strong>${s.streak_before_dropout}</strong> 天穩居看漲榜前十名，今日已跌出前十名</li>`).join("");
+    html += `<div class="box box-dropout"><strong class="title">⚠️ 長期穩居前十名，今日突然跌出</strong><ul>${items}</ul></div>`;
+  }
+  if (entry.long_streak_top5 && entry.long_streak_top5.length) {
+    const items = entry.long_streak_top5.map(s => `<li><strong>${s.name}</strong>（${s.symbol}）已連續 <strong>${s.streak}</strong> 天穩居看漲榜前五名</li>`).join("");
+    html += `<div class="box box-streak"><strong class="title">🔥 連續5天以上穩居前五名</strong><ul>${items}</ul></div>`;
+  }
+  if (entry.hit_rate_summary && entry.hit_rate_summary.overall && entry.hit_rate_summary.overall.n) {
+    const lines = [
+      hitRateLine("整體", entry.hit_rate_summary.overall),
+      hitRateLine("看漲榜", entry.hit_rate_summary.bullish),
+      hitRateLine("看跌榜", entry.hit_rate_summary.bearish),
+    ].join("<br>");
+    html += `<div class="box box-hitrate"><strong class="title">📊 命中率追蹤（累計至今）</strong>${lines}</div>`;
+  }
+
+  html += '<div class="section-title">🔼 最有機會續漲的10檔</div>';
+  html += buildTable(entry.bullish);
+  html += '<div class="section-title">🔽 最需要留意下跌風險的10檔</div>';
+  html += buildTable(entry.bearish);
+
+  main.innerHTML = html;
+}
+
+function selectEntry(id) {
+  currentEntryId = id;
+  const entries = DATA[currentMarket] || [];
+  const entry = entries.find(e => e.id === id);
+  document.querySelectorAll(".session-btn").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  renderMain(entry);
+}
+
+function switchMarket(market) {
+  currentMarket = market;
+  document.querySelectorAll(".market-tab").forEach(t => t.classList.toggle("active", t.dataset.market === market));
+  renderSidebar();
+  const entries = DATA[currentMarket] || [];
+  if (entries.length > 0) {
+    const latest = [...entries].sort((a, b) => (a.date + a.session).localeCompare(b.date + b.session)).pop();
+    selectEntry(latest.id);
+  } else {
+    renderMain(null);
+  }
+}
+
+document.querySelectorAll(".market-tab").forEach(tab => {
+  tab.addEventListener("click", () => switchMarket(tab.dataset.market));
+});
+
+switchMarket("tw");
+</script>
+</body>
+</html>
