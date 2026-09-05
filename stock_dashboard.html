@@ -92,6 +92,15 @@
   .box-hitrate { background: #eef4fb; border: 1px solid #b8d1ea; }
   tr.top-pick { background: #f2f8f5; }
   .pick-note { margin: 6px 0 0 0; font-size: 12px; color: #888; }
+  .th-sub { font-weight: normal; font-size: 11px; color: #888; }
+  .tiny { color: #999; font-size: 10.5px; }
+  .dim { color: #bbb; }
+  .exit-cell { white-space: nowrap; }
+  .exit-t { color: var(--red); font-weight: bold; }
+  .exit-s { color: var(--green); font-weight: bold; }
+  .exit-note {
+    margin: 8px 0 0 0; font-size: 12px; color: #888; line-height: 1.7;
+  }
   .pick-warn {
     margin: 8px 0 0 0; font-size: 12px; color: #8a6d1f; line-height: 1.7;
     background: #fdf6e3; border: 1px solid #e8d9a8; border-radius: 4px; padding: 9px 12px;
@@ -181,14 +190,36 @@ function buildTable(stocks, listType) {
 <td class="center">${s.current_price ?? "—"}</td>
 <td class="center">${fmtScore(s.composite_score)}</td>
 <td class="center">${s.rank_change || "—"}</td>
+${exitCell(s, listType)}
 <td class="center">${s.track_record || "尚無歷史紀錄"}</td>
 <td class="reason">${reason}</td>
 </tr>`;
   }).join("");
   return `<table>
-<thead><tr><th>排名</th><th>股票</th><th>股價</th><th>綜合分數</th><th>排名變化</th><th>歷史命中率</th><th>評分理由</th></tr></thead>
+<thead><tr><th>排名</th><th>股票</th><th>股價</th><th>綜合分數</th><th>排名變化</th><th>掛單價<br><span class="th-sub">停利／停損</span></th><th>歷史命中率</th><th>評分理由</th></tr></thead>
 <tbody>${rows}</tbody>
-</table>${topPickNote(listType)}`;
+</table>${exitNote(listType)}${topPickNote(listType)}`;
+}
+
+// 掛單價：停利＝進場價 + 6.0 × ATR(14)，停損＝進場價 − 4.0 × ATR(14)。
+// 只在看漲榜顯示，這套系統不做空，看跌榜印停利停損會誤導。
+// 舊的歷史快照沒有這些欄位（9/5 之前），所以要能安靜地退回「—」。
+function exitCell(s, listType) {
+  if (listType !== "bullish") return '<td class="center dim">—</td>';
+  if (s.target_price == null || s.stop_price == null) {
+    return '<td class="center dim">—<br><span class="tiny">當時未記錄</span></td>';
+  }
+  return '<td class="center exit-cell">'
+       + '<span class="exit-t">' + s.target_price + '</span><span class="tiny"> +' + s.target_pct + '%</span><br>'
+       + '<span class="exit-s">' + s.stop_price + '</span><span class="tiny"> −' + s.stop_pct + '%</span><br>'
+       + '<span class="tiny">ATR ' + s.atr + '（' + s.atr_pct + '%）</span></td>';
+}
+
+function exitNote(listType) {
+  if (listType !== "bullish") return "";
+  return '<p class="exit-note">「掛單價」上紅為停利（進場價 + 6.0 × ATR14）、下綠為停損（進場價 − 4.0 × ATR14），'
+       + '以該次收盤價為進場價估算。十年回測中這兩條線各只有 6.7% 與 8.3% 的機率被碰到 —— '
+       + '<strong>85% 的交易是「第 10 個交易日收盤無條件出場」</strong>，那才是主要的出場方式。</p>';
 }
 
 function topPickNote(listType) {
