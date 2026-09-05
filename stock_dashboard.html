@@ -192,12 +192,25 @@ function buildTable(stocks, listType) {
 }
 
 function topPickNote(listType) {
+  if (listType === "bearish") {
+    // 看跌榜兩個市場十年回測都不顯著。看漲榜有註解、看跌榜什麼都不寫，
+    // 會讓人誤以為兩張表的可信度一樣。
+    const d = currentMarket === "us"
+      ? { days: "2,472 個交易日、7,416 筆", edge: "−0.127%", t: "−1.56", short: "−0.802%" }
+      : { days: "2,391 個交易日、7,173 筆", edge: "−0.124%", t: "−1.49", short: "−1.404%" };
+    return '<p class="pick-warn">⚠️ <strong>看跌榜沒有經過驗證的預測力。</strong>'
+         + '十年回測（' + d.days + '）顯示，反做（買進看跌榜）相對全池的超額是 '
+         + d.edge + '、t=' + d.t + '，<strong>不顯著</strong>；直接做空則每筆 ' + d.short
+         + '，在這十年的多頭裡是穩定賠錢。請當作持股的出場警訊或避開清單，不要當作放空依據。</p>';
+  }
   if (listType !== "bullish") return "";
   if (currentMarket === "us") {
     return '<p class="pick-warn">⚠️ <strong>這份美股排名目前沒有經過驗證的選股價值。</strong>'
          + '十年回測（2,472 個交易日、7,416 筆）顯示，照名單買進與在同一個候選池裡隨機買進，'
          + '10 日持有的結果沒有統計上的差別（超額 −0.107% ~ +0.024%，所有出場參數下 t 值皆不顯著；'
-         + 'walk-forward 驗收期為 −0.226%）。推測原因是候選池 51 檔幾乎全是高度相關的美國大型科技股。'
+         + 'walk-forward 驗收期為 −0.226%，符號還翻轉）。原因目前還不知道 —— '
+         + '候選池 51 檔本身橫跨科技、金融、能源、醫療、消費，但看漲榜的名額高度集中在'
+         + '少數幾檔高動能科技股（CRM、MSFT、META、NVDA、PLTR 幾乎天天在榜）。'
          + '請當作觀察清單，不要當作選股依據。</p>';
   }
   return '<p class="pick-note">★ 標示的前三名是十年回測中唯一有統計顯著選股價值的區段'
