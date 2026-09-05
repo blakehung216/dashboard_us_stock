@@ -92,6 +92,10 @@
   .box-hitrate { background: #eef4fb; border: 1px solid #b8d1ea; }
   tr.top-pick { background: #f2f8f5; }
   .pick-note { margin: 6px 0 0 0; font-size: 12px; color: #888; }
+  .pick-warn {
+    margin: 8px 0 0 0; font-size: 12px; color: #8a6d1f; line-height: 1.7;
+    background: #fdf6e3; border: 1px solid #e8d9a8; border-radius: 4px; padding: 9px 12px;
+  }
   .box strong.title { font-size: 14px; display: block; margin-bottom: 6px; }
   .box ul { margin: 4px 0 0; padding-left: 18px; }
 
@@ -169,8 +173,8 @@ function buildTable(stocks, listType) {
   if (!stocks || stocks.length === 0) return '<div class="empty">無資料</div>';
   let rows = stocks.map((s, i) => {
     const reason = `基本面：${s.fundamental_note || ""}<br>技術面：${s.technical_note || ""}<br>量價四大買賣點：${s.four_signals_note || ""}<br>消息面：${s.news_note || ""}`;
-    // 回測顯示訊息集中在看漲榜前三名，第五名之後幾乎沒有邊際價值
-    const topPick = listType === "bullish" && i < 3;
+    // 只有台股標示前三名。美股十年回測顯示排名沒有可驗證的選股價值，標了會誤導。
+    const topPick = listType === "bullish" && i < 3 && currentMarket === "tw";
     return `<tr${topPick ? ' class="top-pick"' : ''}>
 <td class="center">${topPick ? `<strong>${i + 1}</strong> ★` : i + 1}</td>
 <td><strong>${s.name}</strong><br><span style="color:#888;font-size:12px;">${s.symbol}</span></td>
@@ -189,6 +193,13 @@ function buildTable(stocks, listType) {
 
 function topPickNote(listType) {
   if (listType !== "bullish") return "";
+  if (currentMarket === "us") {
+    return '<p class="pick-warn">⚠️ <strong>這份美股排名目前沒有經過驗證的選股價值。</strong>'
+         + '十年回測（2,472 個交易日、7,416 筆）顯示，照名單買進與在同一個候選池裡隨機買進，'
+         + '10 日持有的結果沒有統計上的差別（超額 −0.107% ~ +0.024%，所有出場參數下 t 值皆不顯著；'
+         + 'walk-forward 驗收期為 −0.226%）。推測原因是候選池 51 檔幾乎全是高度相關的美國大型科技股。'
+         + '請當作觀察清單，不要當作選股依據。</p>';
+  }
   return '<p class="pick-note">★ 標示的前三名是十年回測中唯一有統計顯著選股價值的區段'
        + '（相對全池超額 +0.348%，t=3.28）；第五名之後的邊際貢獻接近零。'
        + '前三名應視為一籃，回測無法分辨其中誰更強。</p>';
