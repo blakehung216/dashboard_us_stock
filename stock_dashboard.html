@@ -93,6 +93,24 @@
   tr.top-pick { background: #f2f8f5; }
   .pick-note { margin: 6px 0 0 0; font-size: 12px; color: #888; }
   .th-sub { font-weight: normal; font-size: 11px; color: #888; }
+  .pick-cell { white-space: normal; min-width: 130px; }
+  .pick-badge {
+    display: inline-block; background: #1a1a2e; color: #fff; border-radius: 3px;
+    padding: 2px 7px; font-size: 11px; font-weight: bold; white-space: nowrap;
+  }
+  .pick-why { font-size: 11px; color: #777; line-height: 1.55; margin-top: 4px; text-align: left; }
+  .pick-head {
+    margin: 0 0 12px 0; border: 2px solid #1a1a2e; border-radius: 5px; overflow: hidden;
+  }
+  .pick-head h4 {
+    margin: 0; background: #1a1a2e; color: #fff; padding: 8px 12px; font-size: 13px;
+  }
+  .pick-head h4 span { font-weight: normal; opacity: .75; font-size: 11.5px; }
+  .pick-head ol { margin: 0; padding: 10px 12px 10px 32px; font-size: 13px; line-height: 1.8; }
+  .pick-head .skip { padding: 8px 12px; background: #fafafa; border-top: 1px solid #e6e6e6;
+    font-size: 11.5px; color: #666; line-height: 1.7; }
+  .pick-head .why { padding: 9px 12px; background: #fdf6e3; border-top: 1px solid #e8d9a8;
+    font-size: 11.5px; color: #8a6d1f; line-height: 1.7; }
   .tiny { color: #999; font-size: 10.5px; }
   .dim { color: #bbb; }
   .exit-cell { white-space: nowrap; }
@@ -178,14 +196,43 @@ function renderSidebar() {
   });
 }
 
+// 表格上方的「本次建議買進這三檔」摘要，讓人不用在十列裡找 ★。
+function buildPickHeader(stocks, listType) {
+  if (listType !== "bullish" || currentMarket !== "tw") return "";
+  const picked = (stocks || []).filter(x => x.pick_rank)
+                               .sort((a, b) => a.pick_rank - b.pick_rank);
+  if (!picked.length) return "";
+  const items = picked.map(p => {
+    const lv = (p.target_price != null && p.stop_price != null)
+      ? ' 　停利 <b class="exit-t">' + p.target_price + '</b>'
+        + ' 停損 <b class="exit-s">' + p.stop_price + '</b>' : "";
+    return '<li><b>' + p.name + '</b> <span class="tiny">' + p.symbol + '</span>'
+         + ' 　現價 ' + (p.current_price ?? "—") + lv
+         + '<div class="pick-why">' + (p.pick_reason || "") + '</div></li>';
+  }).join("");
+  return '<div class="pick-head"><h4>本次建議買進這三檔'
+       + '<span> 　等金額，各約總投入的三分之一</span></h4>'
+       + '<ol>' + items + '</ol>'
+       + '<div class="why"><b>不是直接照名次前三名。</b>從看漲榜由上往下走，'
+       + '跳過「跟已選標的近 60 日相關係數超過 0.7」的名次 —— 買三檔卻高度連動，'
+       + '等於同一個賭注下三次。十年回測相對「直接拿前 3 名」：最大回撤 −96,913 → −85,033、'
+       + '整年虧錢機率 14.3% → 11.5%，且前 70%／後 30% 兩段都贏。'
+       + '這個規則的證據強度比主結論弱，改善主要在風險面。</div></div>';
+}
+
 function buildTable(stocks, listType) {
   if (!stocks || stocks.length === 0) return '<div class="empty">無資料</div>';
   let rows = stocks.map((s, i) => {
     const reason = `基本面：${s.fundamental_note || ""}<br>技術面：${s.technical_note || ""}<br>量價四大買賣點：${s.four_signals_note || ""}<br>消息面：${s.news_note || ""}`;
-    // 只有台股標示前三名。美股十年回測顯示排名沒有可驗證的選股價值，標了會誤導。
-    const topPick = listType === "bullish" && i < 3 && currentMarket === "tw";
+    // ★ 標示的是「當次建議買進」，不是「名次前三」——
+    // 低相關規則可能跳過某個名次，兩者不一定相同。
+    // 9/9 之前的快照沒有 pick_rank，退回原本的「名次前三」標示。
+    const hasPicks = (stocks || []).some(x => x.pick_rank);
+    const topPick = listType === "bullish" && currentMarket === "tw"
+      && (hasPicks ? !!s.pick_rank : i < 3);
     return `<tr${topPick ? ' class="top-pick"' : ''}>
 <td class="center">${topPick ? `<strong>${i + 1}</strong> ★` : i + 1}</td>
+${pickCell(s, listType)}
 <td><strong>${s.name}</strong><br><span style="color:#888;font-size:12px;">${s.symbol}</span></td>
 <td class="center">${s.current_price ?? "—"}</td>
 <td class="center">${fmtScore(s.composite_score)}</td>
@@ -195,8 +242,8 @@ ${exitCell(s, listType)}
 <td class="reason">${reason}</td>
 </tr>`;
   }).join("");
-  return `<table>
-<thead><tr><th>排名</th><th>股票</th><th>股價</th><th>綜合分數</th><th>排名變化</th><th>掛單價<br><span class="th-sub">停利／停損</span></th><th>歷史命中率</th><th>評分理由</th></tr></thead>
+  return `${buildPickHeader(stocks, listType)}<table>
+<thead><tr><th>排名</th><th>建議<br><span class="th-sub">買進順位</span></th><th>股票</th><th>股價</th><th>綜合分數</th><th>排名變化</th><th>掛單價<br><span class="th-sub">停利／停損</span></th><th>歷史命中率</th><th>評分理由</th></tr></thead>
 <tbody>${rows}</tbody>
 </table>${exitNote(listType)}${topPickNote(listType)}`;
 }
@@ -204,6 +251,20 @@ ${exitCell(s, listType)}
 // 掛單價：停利＝進場價 + 6.0 × ATR(14)，停損＝進場價 − 4.0 × ATR(14)。
 // 只在看漲榜顯示，這套系統不做空，看跌榜印停利停損會誤導。
 // 舊的歷史快照沒有這些欄位（9/5 之前），所以要能安靜地退回「—」。
+// 「建議」欄：這一檔是不是本次建議買進的三檔之一，以及為什麼。
+function pickCell(s, listType) {
+  if (listType !== "bullish" || currentMarket !== "tw") {
+    return '<td class="center dim">—</td>';
+  }
+  if (!s.pick_rank) {
+    return '<td class="center dim">—</td>';
+  }
+  const corr = (s.max_corr === null || s.max_corr === undefined)
+    ? "" : '<br><span class="tiny">最高相關 ' + s.max_corr + '</span>';
+  return '<td class="center pick-cell"><span class="pick-badge">買 ' + s.pick_rank + '</span>'
+       + corr + '<div class="pick-why">' + (s.pick_reason || "") + '</div></td>';
+}
+
 function exitCell(s, listType) {
   if (listType !== "bullish") return '<td class="center dim">—</td>';
   if (s.target_price == null || s.stop_price == null) {
