@@ -145,6 +145,58 @@
   .section-title { font-size: 15px; font-weight: 700; margin: 20px 0 8px; }
   .empty { color: #888; padding: 40px; text-align: center; }
   .reason { font-size: 12px; color: #555; }
+
+  /* ---------- 新手說明（彈出視窗） ---------- */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .help-btn {
+    flex: 0 0 auto; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;
+    color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.35);
+    padding: 8px 16px; border-radius: 999px;
+  }
+  .help-btn:hover { background: rgba(255,255,255,.2); }
+  .guide-overlay {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(16,22,30,.55);
+    display: flex; align-items: flex-start; justify-content: center; padding: 24px 14px; overflow-y: auto;
+  }
+  .guide-overlay[hidden] { display: none !important; }
+  .guide-card {
+    background: #fff; color: #1d2a33; width: 100%; max-width: 620px; margin: auto;
+    border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.35); padding: 26px 22px 30px;
+  }
+  .guide-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .guide-top h2 { margin: 0; font-size: 22px; }
+  .guide-close {
+    flex: 0 0 auto; cursor: pointer; font-family: inherit; border: none; background: #f0f3f6;
+    color: #5c6f7c; width: 34px; height: 34px; border-radius: 50%; font-size: 20px; line-height: 1;
+  }
+  .guide-close:hover { background: #e3e9ef; color: #1d2a33; }
+  .guide-lead { color: #5c6f7c; font-size: 14.5px; margin: 6px 0 18px; line-height: 1.7; }
+  .g-step {
+    display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px;
+    background: #f8fbfd; border: 1px solid #e2eaf0; border-radius: 14px; padding: 16px;
+  }
+  .g-num {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 11px; background: #1a1a2e; color: #fff;
+    font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  }
+  .g-body { min-width: 0; }
+  .g-body h3 { margin: 0 0 6px; font-size: 16.5px; }
+  .g-body p { margin: 0; font-size: 14px; line-height: 1.75; color: #2a3a46; }
+  .g-body p + p { margin-top: 8px; }
+  .g-mini { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+  .g-row {
+    display: flex; gap: 10px; align-items: baseline; background: #fff; border: 1px solid #e2eaf0;
+    border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.6;
+  }
+  .g-row b.k { flex: 0 0 auto; font-weight: 700; }
+  .g-lights { display: flex; gap: 14px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .g-signal { display: flex; flex-direction: column; gap: 6px; background: #20242e; border-radius: 12px; padding: 8px; }
+  .g-bulb { width: 18px; height: 18px; border-radius: 50%; opacity: .3; }
+  .g-bulb.g { background: #2ecf63; } .g-bulb.y { background: #f0b43c; } .g-bulb.r { background: #ff5a4d; }
+  .g-bulb.on { opacity: 1; box-shadow: 0 0 10px 2px rgba(46,207,99,.6); }
+  .g-note { background: #fdf0db; border: 1px solid #ecc478; border-radius: 14px; padding: 16px 18px; }
+  .g-note h3 { margin: 0 0 6px; font-size: 16px; }
+  .g-note p { margin: 0; font-size: 14px; line-height: 1.75; color: #5a4714; }
   /* ---------- 大盤燈號 ---------- */
   .market-tabs { align-items: flex-end; }
   .view-tabs { margin-left: auto; display: flex; gap: 4px; padding-bottom: 8px; }
@@ -248,8 +300,11 @@
 </head>
 <body>
 <header>
-  <h1>📈 股票監測器 Dashboard</h1>
-  <p>台股 / 美股歷史排名瀏覽，資料每次排程執行後自動更新</p>
+  <div class="header-text">
+    <h1>📈 股票監測器 Dashboard</h1>
+    <p>台股 / 美股歷史排名瀏覽，資料每次排程執行後自動更新</p>
+  </div>
+  <button type="button" class="help-btn" onclick="document.getElementById('guide-modal').hidden=false">❓ 新手說明</button>
 </header>
 <div class="market-tabs">
   <button class="market-tab active" data-market="tw">台股</button>
@@ -262,6 +317,64 @@
 <div class="layout">
   <div class="sidebar" id="sidebar"></div>
   <div class="main" id="main"></div>
+</div>
+
+<div class="guide-overlay" id="guide-modal" hidden onclick="if(event.target===this)this.hidden=true">
+  <div class="guide-card" role="dialog" aria-modal="true" aria-label="新手說明">
+    <div class="guide-top">
+      <h2>怎麼看懂這份報告</h2>
+      <button type="button" class="guide-close" aria-label="關閉" onclick="document.getElementById('guide-modal').hidden=true">×</button>
+    </div>
+    <p class="guide-lead">這是一台幫忙猜「哪些股票今天可能會變厲害」的小幫手。照 1、2、3 的順序看就會了。</p>
+
+    <div class="g-step"><div class="g-num">1</div><div class="g-body">
+      <h3>🚦 先看最上面那顆燈</h3>
+      <p>最上面有一顆紅綠燈，就像過馬路看的燈。它只告訴你「今天這個大環境適不適合」，<b>不會幫你選要買哪一檔</b>。</p>
+      <div class="g-lights">
+        <div class="g-signal"><span class="g-bulb r"></span><span class="g-bulb y"></span><span class="g-bulb g on"></span></div>
+        <div style="min-width:0;flex:1;font-size:13.5px;color:#5c6f7c;line-height:1.75">
+          <b style="color:#1f9d4d">綠燈</b>＝天氣好，可以出去玩。<br>
+          <b style="color:#e3972a">黃燈</b>＝小心一點、慢慢來。<br>
+          <b style="color:#c0392b">紅燈</b>＝先停下來，別亂跑。
+        </div>
+      </div>
+    </div></div>
+
+    <div class="g-step"><div class="g-num">2</div><div class="g-body">
+      <h3>☀️ 再看三個天氣小框</h3>
+      <p>就像出門前先看天氣，綠燈下面有三個小框，三個都不錯就代表「好天氣」：</p>
+      <div class="g-mini">
+        <div class="g-row"><b class="k" style="color:#1a1a2e">趨勢</b><span>大家是往上爬還是往下滑？<b>往上</b>比較好。</span></div>
+        <div class="g-row"><b class="k" style="color:#1a1a2e">廣度</b><span>是不是很多股票都很有精神？<b>越多越好</b>。</span></div>
+        <div class="g-row"><b class="k" style="color:#1a1a2e">波動</b><span>今天會不會晃來晃去容易跌倒？<b>越穩越好</b>。</span></div>
+      </div>
+    </div></div>
+
+    <div class="g-step"><div class="g-num">3</div><div class="g-body">
+      <h3>⭐ 看今天挑出來的小明星</h3>
+      <p>中間寫「<b>本次建議買進這三檔</b>」，是機器從一大堆股票裡挑出今天最乖、最可能繼續變厲害的三個。每一個旁邊都有兩條「先講好的線」：</p>
+      <div class="g-mini">
+        <div class="g-row"><b class="k" style="color:#c0392b">停利</b><span>漲到這裡就可以賣，把<b>開心的錢收起來</b>。</span></div>
+        <div class="g-row"><b class="k" style="color:#1f9d4d">停損</b><span>跌到這裡就要走，<b>才不會受更多傷</b>。</span></div>
+      </div>
+      <p style="font-size:12.5px;color:#8a8f94;margin-top:8px">小提醒：報告裡<b style="color:#c0392b">紅色</b>是「漲」、<b style="color:#1f9d4d">綠色</b>是「跌」，和過馬路的燈剛好相反喔。</p>
+    </div></div>
+
+    <div class="g-step" style="background:#fff"><div class="g-num" style="background:#eef4fb;color:#1a1a2e">📊</div><div class="g-body">
+      <h3>它準不準？</h3>
+      <p>有一塊叫「命中率追蹤」，是這台機器以前猜得準不準的<b>成績單</b>。看一下就知道它平常表現，不是隨便亂猜。</p>
+    </div></div>
+
+    <div class="g-step" style="background:#fff"><div class="g-num" style="background:#eef4fb;color:#1a1a2e">📅</div><div class="g-body">
+      <h3>想看別天 / 換市場？</h3>
+      <p>左邊那排日期像<b>日記本</b>，點一天就看那天（盤前＝開市前、盤後＝收市後）。最上面「台股／美股」是兩個遊樂場，可以切換。</p>
+    </div></div>
+
+    <div class="g-note">
+      <h3>⚠️ 最重要的一句</h3>
+      <p>這台機器只是「<b>幫忙猜猜看的小幫手</b>」，不是算命，也不保證一定對。看完要<b>自己想清楚再決定</b>，不可以它說什麼就全部照做——賺和賠，都是自己的責任。</p>
+    </div>
+  </div>
 </div>
 
 <script>
